@@ -261,12 +261,30 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
+			name: "array union",
+			path: "$[0,1]",
+			expected: []lexeme{
+				{typ: lexemeRoot, val: "$"},
+				{typ: lexemeArraySubscript, val: "[0,1]"},
+				{typ: lexemeIdentity, val: ""},
+			},
+		},
+		{
 			name: "bracket child with malformed array subscript",
 			path: "$['child'][1:2:3:4]",
 			expected: []lexeme{
 				{typ: lexemeRoot, val: "$"},
 				{typ: lexemeBracketChild, val: "['child']"},
 				{typ: lexemeError, val: "invalid array index, too many colons: [1:2:3:4] before position 19"},
+			},
+		},
+		{
+			name: "bracket child with malformed array subscript in union",
+			path: "$['child'][0,1:2:3:4]",
+			expected: []lexeme{
+				{typ: lexemeRoot, val: "$"},
+				{typ: lexemeBracketChild, val: "['child']"},
+				{typ: lexemeError, val: "invalid array index, too many colons: [0,1:2:3:4] before position 21"},
 			},
 		},
 		{
@@ -285,6 +303,15 @@ func TestLexer(t *testing.T) {
 				{typ: lexemeRoot, val: "$"},
 				{typ: lexemeDotChild, val: ".child1"},
 				{typ: lexemeBracketChild, val: "['child2']"},
+				{typ: lexemeIdentity, val: ""},
+			},
+		},
+		{
+			name: "array slice of root",
+			path: "$[1:3]",
+			expected: []lexeme{
+				{typ: lexemeRoot, val: "$"},
+				{typ: lexemeArraySubscript, val: "[1:3]"},
 				{typ: lexemeIdentity, val: ""},
 			},
 		},
@@ -566,6 +593,34 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
+			name: "filter string equality, literal on the right",
+			path: "$[?(@.child=='x')]",
+			expected: []lexeme{
+				{typ: lexemeRoot, val: "$"},
+				{typ: lexemeFilterBegin, val: "[?("},
+				{typ: lexemeFilterAt, val: "@"},
+				{typ: lexemeDotChild, val: ".child"},
+				{typ: lexemeFilterEquality, val: "=="},
+				{typ: lexemeFilterStringLiteral, val: "'x'"},
+				{typ: lexemeFilterEnd, val: ")]"},
+				{typ: lexemeIdentity, val: ""},
+			},
+		},
+		{
+			name: "filter string equality, double-quoted literal on the right",
+			path: `$[?(@.child=="x")]`,
+			expected: []lexeme{
+				{typ: lexemeRoot, val: "$"},
+				{typ: lexemeFilterBegin, val: "[?("},
+				{typ: lexemeFilterAt, val: "@"},
+				{typ: lexemeDotChild, val: ".child"},
+				{typ: lexemeFilterEquality, val: "=="},
+				{typ: lexemeFilterStringLiteral, val: `"x"`},
+				{typ: lexemeFilterEnd, val: ")]"},
+				{typ: lexemeIdentity, val: ""},
+			},
+		},
+		{
 			name: "filter integer equality with invalid literal",
 			path: "$[?(@.child==-)]",
 			expected: []lexeme{
@@ -610,7 +665,7 @@ func TestLexer(t *testing.T) {
 				{typ: lexemeFilterAt, val: "@"},
 				{typ: lexemeDotChild, val: ".child"},
 				{typ: lexemeFilterEquality, val: "=="},
-				{typ: lexemeError, val: `unmatched string delimiter "'" at position 13, following "=="`},
+				{typ: lexemeError, val: `unmatched string delimiter ' at position 13, following "=="`},
 			},
 		},
 		{
@@ -736,7 +791,7 @@ func TestLexer(t *testing.T) {
 			expected: []lexeme{
 				{typ: lexemeRoot, val: "$"},
 				{typ: lexemeFilterBegin, val: "[?("},
-				{typ: lexemeError, val: `unmatched string delimiter "'" at position 4, following "[?("`},
+				{typ: lexemeError, val: `unmatched string delimiter ' at position 4, following "[?("`},
 			},
 		},
 		{
@@ -748,7 +803,7 @@ func TestLexer(t *testing.T) {
 				{typ: lexemeFilterAt, val: "@"},
 				{typ: lexemeDotChild, val: ".child"},
 				{typ: lexemeFilterEquality, val: "=="},
-				{typ: lexemeError, val: `unmatched string delimiter "'" at position 13, following "=="`},
+				{typ: lexemeError, val: `unmatched string delimiter ' at position 13, following "=="`},
 			},
 		},
 		{

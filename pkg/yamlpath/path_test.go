@@ -372,35 +372,9 @@ feather duster:
 			expectedPathErr: "",
 		},
 		{
-			name: "bracket dotted child",
-			path: "$['store.book']",
-			expectedStrings: []string{`- category: reference
-  author: Nigel Rees
-  title: Sayings of the Century
-  price: 8.95
-- category: fiction
-  author: Evelyn Waugh
-  title: Sword of Honour
-  price: 12.99
-- category: fiction
-  author: Herman Melville
-  title: Moby Dick
-  isbn: 0-553-21311-3
-  price: 8.99
-- category: fiction
-  author: J. R. R. Tolkien
-  title: The Lord of the Rings
-  isbn: 0-395-19395-8
-  price: 22.99
-`},
-			expectedPathErr: "",
-		},
-		{
-			name: "bracket child with embedded wildcard",
-			path: "$['store.*.color']",
-			expectedStrings: []string{
-				"red\n",
-			},
+			name:            "bracket dotted child",
+			path:            "$['store.book']",
+			expectedStrings: []string{},
 			expectedPathErr: "",
 		},
 		{
@@ -557,15 +531,6 @@ feather duster:
 		{
 			name: "dot wildcarded children",
 			path: "$.store.bicycle.*",
-			expectedStrings: []string{
-				"red\n",
-				"19.95\n",
-			},
-			expectedPathErr: "",
-		},
-		{
-			name: "bracketed wildcarded children",
-			path: "$['store.bicycle.*']",
 			expectedStrings: []string{
 				"red\n",
 				"19.95\n",
@@ -780,6 +745,12 @@ price: 22.99
 			expectedPathErr: "",
 		},
 		{
+			name:            "array subscript out of bounds:",
+			path:            "$.store.book[99]",
+			expectedStrings: []string{},
+			expectedPathErr: "",
+		},
+		{
 			name: "filter >",
 			path: "$.store.book[?(@.price > 8.98)]",
 			expectedStrings: []string{
@@ -815,7 +786,7 @@ price: 8.95
 		},
 		{
 			name: "filter == with bracket child",
-			path: "$['store.book'][?(@.category == 'reference')]",
+			path: "$.store.book[?(@.category == 'reference')]",
 			expectedStrings: []string{
 				`category: reference
 author: Nigel Rees
@@ -937,6 +908,27 @@ func TestFindOtherDocuments(t *testing.T) {
 a: b`,
 			path:            ".a",
 			expectedStrings: []string{"b\n"},
+		},
+		{
+			name: "document with top-level array",
+			input: `- c: a
+- a: b`,
+			path:            "$[0]",
+			expectedStrings: []string{"c: a\n"},
+		},
+		{
+			name: "document with top-level array, .*",
+			input: `- c: a
+- a: b`,
+			path:            "$.*",
+			expectedStrings: []string{"c: a\n", "a: b\n"},
+		},
+		{
+			name: "document with top-level array, filter with double-quoted string literal",
+			input: `- c: a
+- a: b`,
+			path:            `$[?(@.c=="a")]`,
+			expectedStrings: []string{"c: a\n"},
 		},
 	}
 

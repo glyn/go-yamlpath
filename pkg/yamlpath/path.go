@@ -92,7 +92,7 @@ func newPath(l *lexer) (*Path, error) {
 			return new(empty), err
 		}
 		childNames := strings.TrimSuffix(strings.TrimPrefix(lx.val, "['"), "']")
-		return childrenThen(childNames, subPath), nil
+		return childThen(childNames, subPath), nil
 
 	case lexemeArraySubscript:
 		subPath, err := newPath(l)
@@ -156,14 +156,6 @@ func new(f func(node, root *yaml.Node) yit.Iterator) *Path {
 	return &Path{f: f}
 }
 
-func childrenThen(childNames string, p *Path) *Path {
-	c := strings.SplitN(childNames, ".", 2)
-	if len(c) == 2 {
-		return childThen(c[0], childrenThen(c[1], p))
-	}
-	return childThen(c[0], p)
-}
-
 func childThen(childName string, p *Path) *Path {
 	if childName == "*" {
 		return allChildrenThen(p)
@@ -183,17 +175,27 @@ func childThen(childName string, p *Path) *Path {
 
 func allChildrenThen(p *Path) *Path {
 	return new(func(node, root *yaml.Node) yit.Iterator {
-		if node.Kind != yaml.MappingNode {
+		switch node.Kind {
+		case yaml.MappingNode:
+			its := []yit.Iterator{}
+			for i, n := range node.Content {
+				if i%2 == 0 {
+					continue // skip child names
+				}
+				its = append(its, compose(yit.FromNode(n), p, root))
+			}
+			return yit.FromIterators(its...)
+
+		case yaml.SequenceNode:
+			its := []yit.Iterator{}
+			for i := 0; i < len(node.Content); i++ {
+				its = append(its, compose(yit.FromNode(node.Content[i]), p, root))
+			}
+			return yit.FromIterators(its...)
+
+		default:
 			return empty(node, root)
 		}
-		its := []yit.Iterator{}
-		for i, n := range node.Content {
-			if i%2 == 0 {
-				continue // skip child names
-			}
-			its = append(its, compose(yit.FromNode(n), p, root))
-		}
-		return yit.FromIterators(its...)
 	})
 }
 
@@ -210,7 +212,9 @@ func arraySubscriptThen(subscript string, p *Path) *Path {
 
 		its := []yit.Iterator{}
 		for _, s := range slice {
-			its = append(its, compose(yit.FromNode(node.Content[s]), p, root))
+			if s >= 0 && s < len(node.Content) {
+				its = append(its, compose(yit.FromNode(node.Content[s]), p, root))
+			}
 
 		}
 		return yit.FromIterators(its...)
@@ -221,7 +225,7 @@ func filterThen(filterLexemes []lexeme, p *Path) *Path {
 	filter := newFilter(newFilterNode(filterLexemes))
 	return new(func(node, root *yaml.Node) yit.Iterator {
 		if node.Kind != yaml.SequenceNode {
-			panic("not implemented")
+			return empty(node, root)
 		}
 
 		its := []yit.Iterator{}

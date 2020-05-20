@@ -15,7 +15,7 @@ Valid paths are strings conforming to the following BNF syntax.
 <identity> ::= ""                                        ; the current node
 <root> ::= "$"                                           ; the root node of a document
 <subpath> ::= <identity> | <child> <subpath> |
-              <child> <array access> <subpath> |
+              <array access> <subpath> |
               <recursive descent> <subpath>
 
 <child> ::= <dot child> | <bracket child>
@@ -28,8 +28,9 @@ Valid paths are strings conforming to the following BNF syntax.
 
 <recursive descent> ::= ".." <child name>                ; all the descendants named <child name>
 
-<array access> ::= "[" <index> "]" | "[" <filter> "]"    ; zero or more elements of a sequence
+<array access> ::= "[" union "]" | "[" <filter> "]"      ; zero or more elements of a sequence
 
+<union> ::= <index> | <index> "," <union>
 <index> ::= <integer> | <range> | "*"                    ; specific index, range of indices, or all indices
 <range> ::= <integer> ":" <integer> |                    ; start (inclusive) to end (exclusive)
             <integer> ":" <integer> ":" <integer>        ; start (inclusive) to end (exclusive) by step
@@ -92,6 +93,8 @@ This matches the children with the given name of all the mapping nodes in the in
 
 Although either form `.childname` or `['childname']` accepts a child name with embedded spaces, the 
 `['childname']` form may be more convenient in some situations.
+
+As a special case, `.*` also matches all the nodes in each sequence node in the input slice.
 
 ### Recursive Descent: `..childname` or `..*`
 
